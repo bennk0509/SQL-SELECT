@@ -571,18 +571,131 @@ where not exists
 )
 
 --Q70. Cho biết tên đề tài nào mà được tất cả các giáo viên của khoa Sinh Học tham gia.
+select d.TENDT
+from DETAI d
+where not exists
+(
+	(select g.MAGV from GIAOVIEN g join BOMON b on g.MABM = b.MABM join KHOA k on k.MAKHOA = b.MAKHOA where k.TENKHOA = N'Sinh Học')
+	except
+	(
+		select t.MAGV
+		from DETAI d1 join THAMGIADT t on d1.MADT = t.MADT
+		where d1.TENDT = d.TENDT
+	)
+)
 
 --Q71. Cho biết mã số, họ tên, ngày sinh của giáo viên tham gia tất cả các công việc của đề tài “Ứng dụng hóa học xanh”.
+select g.MAGV, g.HOTEN, g.NGSINH
+from GIAOVIEN g
+where not exists
+(
+	(select c.MADT,c.SOTT from CONGVIEC c join DETAI d on c.MADT = d.MADT where d.TENDT = N'Ứng dụng hóa học xanh')
+	except
+	(
+	select t.MADT, t.STT
+	from GIAOVIEN g2 join THAMGIADT t on g2.MAGV = t.MAGV
+	where g.MAGV = g2.MAGV and g.HOTEN = g2.HOTEN and g.NGSINH = g2.NGSINH
+	)
+)
 
+SELECT GV1.MAGV, GV1.HOTEN, GV1.NGSINH
+FROM GIAOVIEN GV1
+WHERE not EXISTS (
+	(SELECT CONGVIEC.MADT, CONGVIEC.SOTT FROM CONGVIEC JOIN DETAI ON CONGVIEC.MADT = DETAI.MADT WHERE DETAI.TENDT = N'Ứng dụng hóa học xanh')
+	EXCEPT
+	(SELECT TGDT.MADT, TGDT.STT 
+	FROM THAMGIADT TGDT JOIN GIAOVIEN GV2 ON TGDT.MAGV = GV2.MAGV
+	WHERE GV2.HOTEN = GV1.HOTEN AND GV2.MAGV = GV1.MAGV AND GV1.NGSINH = GV2.NGSINH)
+)
 --Q72. Cho biết mã số, họ tên, tên bộ môn và tên người --quản lý chuyên môn của giáo viên tham gia tất cả các đề
 --tài thuộc chủ đề “Nghiên cứu phát triển”.
+-- r: 
+-- s cac de tai thuoc chu de nghien cuu phat trien
+select g.MAGV,g.HOTEN, b.TENBM , nqlcm.HOTEN as QLCM
+from GIAOVIEN nqlcm join GIAOVIEN g on g.GVQLCM = nqlcm.MAGV join BOMON b on g.MABM = b.MABM
+where not exists
+(
+	(select d.MADT from DETAI d join CHUDE c on d.MACD = c.MACD where c.TENCD = N'Nghiên cứu phát triển')
+	except
+	(
+		select t.MADT
+		from GIAOVIEN nqlcm1 join GIAOVIEN g1 on g1.GVQLCM = nqlcm1.MAGV join BOMON b1 on g1.MABM = b1.MABM join THAMGIADT t on t.MAGV = g1.MAGV
+		where g.MAGV = g1.MAGV and g.HOTEN = g1.HOTEN and b.TENBM = b1.TENBM and nqlcm.HOTEN = nqlcm1.HOTEN
+	)
+)
+
+SELECT GV1.MAGV, GV1.HOTEN, BOMON.TENBM, GVV.HOTEN as TenNguoiQuanLy
+FROM GIAOVIEN GV1 JOIN BOMON ON BOMON.MABM = GV1.MABM JOIN GIAOVIEN GVV ON GV1.GVQLCM = GVV.MAGV
+WHERE NOT EXISTS(
+	(SELECT DETAI.MADT FROM DETAI JOIN CHUDE ON DETAI.MACD = CHUDE.MACD WHERE CHUDE.TENCD = N'Nghiên cứu phát triển')
+	EXCEPT 
+	(SELECT TGDT.MADT
+	FROM GIAOVIEN GV2 JOIN THAMGIADT TGDT ON GV2.MAGV = TGDT.MAGV JOIN DETAI DT ON TGDT.MADT = DT.MADT JOIN CHUDE CD ON DT.MACD = CD.MACD
+	WHERE CD.TENCD = N'Nghiên cứu phát triển' AND GV2.MAGV = GV1.MAGV)
+)
 
 --Q73. Cho biết họ tên, ngày sinh, tên khoa, tên trưởng khoa của giáo viên tham gia tất cả các đề tài có giáo viên “Nguyễn Hoài An” tham gia.
+select g.HOTEN, g.NGSINH, k.TENKHOA, TK.HOTEN
+from GIAOVIEN g join BOMON b on g.MABM = b.MABM 
+join KHOA k on k.MAKHOA = b.MAKHOA 
+join GIAOVIEN TK on TK.MAGV = K.TRUONGKHOA
+where G.HOTEN NOT LIKE N'Nguyễn Hoài An' and not exists
+(
+	(select T.MADT from  THAMGIADT t  join GIAOVIEN g2 on g2.MAGV = t.MAGV where g2.HOTEN = N'Nguyễn Hoài An')
+	except
+	(
+		select t1.MADT
+		from GIAOVIEN g1 join THAMGIADT t1 on g1.MAGV = t1.MAGV 
+		join BOMON b1 on g1.MABM = b1.MABM 
+		join KHOA k1 on k1.MAKHOA = b1.MAKHOA 
+		join GIAOVIEN TK1 on TK1.MAGV = K1.TRUONGKHOA
+		where g.HOTEN = G1.HOTEN AND g.NGSINH = G1.NGSINH AND K1.TENKHOA = K.TENKHOA AND TK.HOTEN = TK1.HOTEN
+	)
+)
 
 --Q74. Cho biết họ tên giáo viên khoa “Công nghệ thông tin” tham gia tất cả các công việc của đề tài có 
 --trưởng bộ môn của bộ môn đông nhất khoa “Công nghệ thông tin” làm chủ nhiệm.
+--r:
+--s:
+--trưởng bộ môn của bộ môn đông nhất khoa “Công nghệ thông tin” làm chủ nhiệm.
+select b.TRUONGBM, count(g.MAGV) 
+from BOMON b join KHOA k on b.MAKHOA = k.MAKHOA join GIAOVIEN g on g.MABM = b.MABM
+where k.TENKHOA = N'Công nghệ thông tin'
+group by (b.TRUONGBM)
+having count(g.MAGV) >= all( select count(g.magv) from BOMON b join KHOA k on b.MAKHOA = k.MAKHOA join GIAOVIEN g on g.MABM = b.MABM  where k.TENKHOA = N'Công nghệ thông tin' group by (b.TRUONGBM) 
+) 
+--
+Select bm.TruongBM
+From GiaoVien gv Join BoMon bm On bm.MaBM = gv.MaBM Join Khoa k On k.MaKhoa = bm.MaKhoa 
+Where k.TenKhoa like N'Công nghệ thông tin'
+Group By (bm.TruongBM)
+Having count(gv.MaGV) >= All ( 
+	Select count(gv1.MaGV)
+	From GiaoVien gv1 Join BoMon bm1 On bm1.MaBM = gv1.MaBM Join Khoa k1 On k1.MaKhoa = bm1.MaKhoa 
+	Where k1.TenKhoa like N'Công nghệ thông tin'
+	Group By (bm1.TruongBM)
+)
+--Q74. Cho biết họ tên giáo viên khoa “Công nghệ thông tin” tham gia tất cả các công việc của đề tài có 
+--trưởng bộ môn của bộ môn đông nhất khoa “Công nghệ thông tin” làm chủ nhiệm.
+select g1.HOTEN
+from GIAOVIEN g1 join BOMON b1 on g1.MABM = b1.MABM join KHOA k1 on k1.MAKHOA = b1.MAKHOA
+where k1.TENKHOA = N'Công nghệ thông tin' and
+not exists
+(
+	(select c.MADT,c.SOTT from DETAI d join CONGVIEC c on d.MADT = c.MADT )
+	except
+	(
+		select t.MADT,t.STT
+		from GIAOVIEN g join THAMGIADT t on g.MAGV = t.MAGV
+		where g1.HOTEN = g.HOTEN and g.MAGV = (select b.TRUONGBM
+		from BOMON b join KHOA k on b.MAKHOA = k.MAKHOA join GIAOVIEN g on g.MABM = b.MABM
+		where k.TENKHOA = N'Công nghệ thông tin' and g1.HOTEN = g.HOTEN
+		group by (b.TRUONGBM)
+		having count(g.MAGV) >= all( select count(g.magv) from BOMON b join KHOA k on b.MAKHOA = k.MAKHOA join GIAOVIEN g on g.MABM = b.MABM  where k.TENKHOA = N'Công nghệ thông tin' group by (b.TRUONGBM)) 
+)
 
-
+	)
+) 
 
 --Q75. Cho biết họ tên giáo viên và tên bộ môn họ làm trưởng bộ môn nếu có
 
